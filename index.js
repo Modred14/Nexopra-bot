@@ -46,6 +46,8 @@ STRICT RULES:
 - Deadlines must be AFTER ${currentDate}. Never include expired listings.
 - No opportunities from 2023 or 2024.
 - Include hackathons with prize pools when relevant.
+- If the opportunity is REMOTE: search worldwide, any country is fine.
+- If the opportunity is ON-SITE or HYBRID: only include opportunities located in or near ${user.timezone === "Africa/Lagos" ? "Nigeria" : user.timezone}.
 - Prefer remote-friendly roles.
 - Use real, plausible apply URLs (e.g. linkedin.com, devpost.com, wellfound.com, unstop.com).
 - No duplicates.
@@ -356,9 +358,9 @@ async function handleMessage(sock, msg) {
       lower === "yeah" ||
       lower === "yep"
     ) {
-    //   await sock.sendMessage(sender, {
-    //     text: `🔍 On it, searching that for you...`,
-    //   });
+      //   await sock.sendMessage(sender, {
+      //     text: `🔍 On it, searching that for you...`,
+      //   });
       const aiReply = await askGemini(query, user);
       await sock.sendMessage(sender, { text: aiReply });
     } else {
@@ -450,7 +452,6 @@ async function handleMessage(sock, msg) {
     "howfar",
     "how far na",
     "guy",
-    "e don do",
     "oya",
     "abeg",
     "abeg help me",
@@ -458,11 +459,9 @@ async function handleMessage(sock, msg) {
     "sis",
     "bro",
     "na me",
-    "i don reach",
     "wetin dey",
     "whats up naija",
     "sup naija",
-    "e go better",
 
     // Sup/what's up
     "sup",
@@ -617,7 +616,6 @@ async function handleMessage(sock, msg) {
     "how body",
     "how body na",
     "i dey",
-    "e don do",
     "make we start",
     "abeg start",
     "help me",
@@ -650,6 +648,7 @@ async function handleMessage(sock, msg) {
     "bro hi",
     "fam",
     "g",
+    "gee",
   ];
   const greetingsPep = [
     "Hope you're doing okay.",

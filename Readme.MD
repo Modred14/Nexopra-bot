@@ -32,7 +32,7 @@ Scan the QR code that appears in your terminal with WhatsApp.
 
 ## Environment
 
-The bot calls the Anthropic API at `api.anthropic.com`. Make sure your server has outbound HTTPS access and a valid Anthropic API key injected via your deployment environment (the API key is handled by the hosting layer — no `.env` needed if you use Anthropic's platform).
+The bot calls the Gemini API. Make sure your server has outbound HTTPS access and a valid Gemini API key injected via your deployment environment (the API key is handled by the hosting layer — no `.env` needed if you use Gemini's platform).
 
 ## Files
 

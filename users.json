@@ -1,0 +1,18 @@
+{
+  "66271613866160@lid": {
+    "name": "Modred",
+    "field": "Full Stack Dev",
+    "deliveryTime": "06:00",
+    "timezone": "Africa/Lagos",
+    "active": true,
+    "joinedAt": "2026-05-19T00:21:36.300Z"
+  },
+  "145076009345267@lid": {
+    "name": "Erioluwa",
+    "field": "Frontend Dev",
+    "deliveryTime": "08:34",
+    "timezone": "Africa/Lagos",
+    "active": true,
+    "joinedAt": "2026-05-19T07:34:30.048Z"
+  }
+}

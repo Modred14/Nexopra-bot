@@ -6,12 +6,27 @@ import qrcode from "qrcode-terminal";
 import fs from "fs";
 import https from "https";
 import http from "http";
+import fetch from "node-fetch";
 import "dotenv/config";
 
 // ─────────────────────────────────────────
 // PERSISTENT USER STORE
 // ─────────────────────────────────────────
 const USERS_FILE = "users.json";
+const SEEN_FILE = "seen_opportunities.json";
+
+function loadSeen() {
+  if (fs.existsSync(SEEN_FILE)) {
+    return JSON.parse(fs.readFileSync(SEEN_FILE, "utf8"));
+  }
+  return {};
+}
+
+function saveSeen(seen) {
+  fs.writeFileSync(SEEN_FILE, JSON.stringify(seen, null, 2));
+}
+
+let seenOpportunities = loadSeen();
 
 function loadUsers() {
   if (fs.existsSync(USERS_FILE)) {
@@ -35,49 +50,90 @@ const sessions = {}; // { jid: { step, tmpData } }
 // ─────────────────────────────────────────
 // OPPORTUNITY FETCHER (Claude AI via Anthropic API)
 // ─────────────────────────────────────────
-async function fetchOpportunitiesForUser(user) {
-  const currentDate = new Date().toISOString().split("T")[0];
-  const prompt = `You are Nexopra, an AI opportunity scout. Today's date is ${currentDate}.
+// ─── Devpost: Free real-time hackathon search ───────────────────────────────
+async function fetchFromDevpost(field) {
+  try {
+    const query = encodeURIComponent(field);
+    const res = await fetch(
+      `https://devpost.com/api/hackathons?search=${query}&status=upcoming&order_by=deadline`,
+    );
+    const data = await res.json();
 
-Find 3–5 real, CURRENT opportunities for someone skilled in: ${user.field}.
+    if (!data.hackathons || !Array.isArray(data.hackathons)) return [];
 
-STRICT RULES:
-- Only include opportunities posted in 2025 or later.
-- Deadlines must be AFTER ${currentDate}. Never include expired listings.
-- No opportunities from 2023 or 2024.
-- Include hackathons with prize pools when relevant.
-- If the opportunity is REMOTE: search worldwide, any country is fine.
-- If the opportunity is ON-SITE or HYBRID: only include opportunities located in or near ${user.timezone === "Africa/Lagos" ? "Nigeria" : user.timezone}.
-- Prefer remote-friendly roles.
-- Use real, plausible apply URLs (e.g. linkedin.com, devpost.com, wellfound.com, unstop.com).
-- No duplicates.
+    const today = new Date();
 
-Return ONLY a JSON array with this shape (no markdown fences):
-[
-  {
-    "title": "...",
-    "type": "Job | Internship | Hackathon | Program",
-    "remote": true,
-    "deadline": "Month DD, YYYY or null",
-    "prize": "$... or null",
-    "applyUrl": "https://...",
-    "summary": "One sentence description."
+    return data.hackathons
+      .filter((h) => {
+        if (!h.submission_period_dates) return true;
+        // Try to parse deadline from the date string
+        const parts = h.submission_period_dates.split(" - ");
+        const deadlineStr = parts[parts.length - 1];
+        const deadline = new Date(deadlineStr);
+        return isNaN(deadline) || deadline > today; // keep if unparseable or future
+      })
+      .slice(0, 3)
+      .map((h) => {
+        // Parse deadline display string
+        const parts = h.submission_period_dates?.split(" - ") || [];
+        const deadlineRaw = parts[parts.length - 1] || null;
+        let deadlineFormatted = null;
+        if (deadlineRaw) {
+          const d = new Date(deadlineRaw);
+          if (!isNaN(d)) {
+            deadlineFormatted = d.toLocaleDateString("en-US", {
+              month: "long",
+              day: "2-digit",
+              year: "numeric",
+            });
+          }
+        }
+
+        // Prize pool
+        let prize = null;
+        if (h.prize_amount && h.prize_amount > 0) {
+          prize = `$${Number(h.prize_amount).toLocaleString()}`;
+        }
+
+        return {
+          title: h.title || "Untitled Hackathon",
+          type: "Hackathon",
+          remote:
+            h.displayed_location?.location === "Online" ||
+            h.online_only === true,
+          deadline: deadlineFormatted,
+          prize,
+          applyUrl: h.url || `https://devpost.com/hackathons`,
+          source: "Devpost",
+          summary: h.tagline || "A hackathon on Devpost.",
+        };
+      });
+  } catch (e) {
+    console.error("Devpost fetch error:", e.message);
+    return [];
   }
-]`;
+}
 
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+// ─── Groq API helper ───────────────────────────────────────────────────────
+async function callGroq(prompt, jsonMode = false) {
+  const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
   return new Promise((resolve) => {
     const body = JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 1500,
+      temperature: 0.3,
+      ...(jsonMode && { response_format: { type: "json_object" } }),
     });
 
     const options = {
-      hostname: "generativelanguage.googleapis.com",
-      path: `/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      hostname: "api.groq.com",
+      path: "/openai/v1/chat/completions",
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${GROQ_API_KEY}`,
         "Content-Length": Buffer.byteLength(body),
       },
     };
@@ -88,19 +144,17 @@ Return ONLY a JSON array with this shape (no markdown fences):
       res.on("end", () => {
         try {
           const parsed = JSON.parse(data);
-          const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text || "";
-          const clean = text.replace(/```json|```/g, "").trim();
-          const opportunities = JSON.parse(clean);
-          resolve(opportunities);
+          const text = parsed.choices?.[0]?.message?.content || "";
+          resolve(text.trim());
         } catch (e) {
-          console.error("Parse error:", e.message);
+          console.error("Groq parse error:", e.message);
           resolve(null);
         }
       });
     });
 
     req.on("error", (e) => {
-      console.error("API request error:", e.message);
+      console.error("Groq request error:", e.message);
       resolve(null);
     });
 
@@ -108,65 +162,233 @@ Return ONLY a JSON array with this shape (no markdown fences):
     req.end();
   });
 }
-async function askGemini(userMessage, user) {
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-  const currentDate = new Date().toISOString().split("T")[0];
 
-  return new Promise((resolve) => {
-    const body = JSON.stringify({
-      tools: [{ google_search: {} }],
-      contents: [
-        {
-          parts: [
-            {
-              text: `You are Nexopra, a friendly AI assistant on WhatsApp helping ${user.name}, a ${user.field} professional/student. Today is ${currentDate}.
+function filterUnseen(jid, opportunities) {
+  if (!seenOpportunities[jid]) seenOpportunities[jid] = [];
 
-The user said: "${userMessage}"
+  const seen = new Set(seenOpportunities[jid]);
 
-Reply in a conversational, helpful WhatsApp tone — short, clear, no markdown headers. Use emojis naturally. If it's opportunity or career related, search and give current info. If it's a greeting or casual message, respond warmly. Keep it under 200 words.`,
-            },
-          ],
-        },
-      ],
-    });
+  const fresh = opportunities.filter((opp) => {
+    const key = opp.title?.toLowerCase().trim();
+    return !seen.has(key);
+  });
 
-    const options = {
-      hostname: "generativelanguage.googleapis.com",
-      path: `/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(body),
-      },
+  // Save newly seen ones
+  fresh.forEach((opp) => {
+    const key = opp.title?.toLowerCase().trim();
+    seenOpportunities[jid].push(key);
+  });
+
+  // Cap seen list at 200 per user so it doesn't grow forever
+  if (seenOpportunities[jid].length > 200) {
+    seenOpportunities[jid] = seenOpportunities[jid].slice(-200);
+  }
+
+  saveSeen(seenOpportunities);
+  return fresh;
+}
+// ─── Gemini: Jobs, Internships, Programs (+ non-hackathon web search) ────────
+// ─── Jobicy: Real remote jobs ─────────────────────────────────────────────
+async function fetchFromJobicy(field) {
+  try {
+    const skillMap = {
+      "Frontend Dev": "javascript",
+      "Backend Dev": "nodejs",
+      "Full Stack Dev": "javascript",
+      "UI/UX Design": "design",
+      "Mobile Dev": "react-native",
+      "Data Science / AI": "python",
+      Cybersecurity: "security",
+      "DevOps / Cloud": "devops",
+      "Product Management": "product",
+      "Blockchain / Web3": "web3",
     };
 
-    const req = https.request(options, (res) => {
-      let data = "";
-      res.on("data", (chunk) => (data += chunk));
-      res.on("end", () => {
-        try {
-          const parsed = JSON.parse(data);
-          const text =
-            parsed.candidates?.[0]?.content?.parts
-              ?.filter((p) => p.text)
-              .map((p) => p.text)
-              .join("") || "I couldn't find anything on that. Try rephrasing!";
-          resolve(text.trim());
-        } catch (e) {
-          console.error("askGemini parse error:", e.message);
-          resolve("Hmm, I ran into an issue searching that 😅 Try again!");
-        }
-      });
-    });
+    const results = [];
 
-    req.on("error", (e) => {
-      console.error("askGemini request error:", e.message);
-      resolve("I couldn't reach the internet right now 😅 Try again shortly!");
-    });
+    for (const f of field.split(", ")) {
+      const tag = skillMap[f.trim()] || "javascript";
+      // fetch more jobs and randomly offset
+      const res = await fetch(
+        `https://jobicy.com/api/v2/remote-jobs?count=20&tag=${tag}`,
+        { headers: { Accept: "application/json" } },
+      );
+      const data = await res.json();
+      if (!data.jobs || !Array.isArray(data.jobs)) continue;
 
-    req.write(body);
-    req.end();
+      // shuffle then pick 3
+      const shuffled = data.jobs.sort(() => Math.random() - 0.5);
+      for (const job of shuffled.slice(0, 3)) {
+        results.push({
+          title: job.jobTitle,
+          type: "Job",
+          remote: true,
+          deadline: null,
+          prize: null,
+          applyUrl: job.url,
+          source: "Jobicy",
+          summary: `${job.jobType} at ${job.companyName} — ${job.jobIndustry?.[0] || "Tech"}.`,
+        });
+      }
+    }
+
+    return results;
+  } catch (e) {
+    console.error("Jobicy fetch error:", e.message);
+    return [];
+  }
+}
+async function fetchFromArbeitnow(field) {
+  try {
+    const tagMap = {
+      "Frontend Dev": "frontend",
+      "Backend Dev": "backend",
+      "Full Stack Dev": "fullstack",
+      "UI/UX Design": "design",
+      "Mobile Dev": "mobile",
+      "Data Science / AI": "data-science",
+      Cybersecurity: "security",
+      "DevOps / Cloud": "devops",
+      "Product Management": "product-management",
+      "Blockchain / Web3": "blockchain",
+    };
+
+    const results = [];
+
+    for (const f of field.split(", ").slice(0, 2)) {
+      const tag = tagMap[f.trim()] || "software-engineer";
+      const res = await fetch(
+        `https://www.arbeitnow.com/api/job-board-api?tags[]=${tag}`,
+      );
+      const data = await res.json();
+      if (!data.data || !Array.isArray(data.data)) continue;
+
+      const shuffled = data.data.sort(() => Math.random() - 0.5);
+      for (const job of shuffled.slice(0, 3)) {
+        results.push({
+          title: job.title,
+          type: "Job",
+          remote: job.remote || false,
+          deadline: null,
+          prize: null,
+          applyUrl: job.url,
+          source: "Arbeitnow",
+          summary: `${job.job_types?.[0] || "Full-time"} at ${job.company_name}.`,
+        });
+      }
+    }
+
+    return results;
+  } catch (e) {
+    console.error("Arbeitnow fetch error:", e.message);
+    return [];
+  }
+}
+async function fetchFromRemotive(field) {
+  try {
+    const categoryMap = {
+      "Frontend Dev": "software-dev",
+      "Backend Dev": "software-dev",
+      "Full Stack Dev": "software-dev",
+      "UI/UX Design": "design",
+      "Mobile Dev": "software-dev",
+      "Data Science / AI": "data",
+      Cybersecurity: "devops-sysadmin",
+      "DevOps / Cloud": "devops-sysadmin",
+      "Product Management": "product",
+      "Blockchain / Web3": "software-dev",
+    };
+
+    const results = [];
+
+    for (const f of field.split(", ").slice(0, 2)) {
+      const cat = categoryMap[f.trim()] || "software-dev";
+      const res = await fetch(
+        `https://remotive.com/api/remote-jobs?category=${cat}&limit=20`,
+      );
+      const data = await res.json();
+      if (!data.jobs || !Array.isArray(data.jobs)) continue;
+
+      // shuffle then pick 2
+      const shuffled = data.jobs.sort(() => Math.random() - 0.5);
+      for (const job of shuffled.slice(0, 2)) {
+        results.push({
+          title: job.title,
+          type: "Job",
+          remote: true,
+          deadline: null,
+          prize: null,
+          applyUrl: job.url,
+          source: "Remotive",
+          summary: `${job.job_type} at ${job.company_name}.`,
+        });
+      }
+    }
+
+    return results;
+  } catch (e) {
+    console.error("Remotive fetch error:", e.message);
+    return [];
+  }
+}
+
+// ─── Main export: merges both sources ────────────────────────────────────────
+async function fetchOpportunitiesForUser(user, filterType = null) {
+  const isHackathonOnly = filterType === "Hackathon";
+  const isJobOnly = filterType === "Job";
+  const includeHackathons = !filterType || filterType === "Hackathon";
+  const includeJobs = !filterType || filterType === "Job";
+
+  const [devpostResults, jobicyResults, remotiveResults, arbeitnowResults] =
+    await Promise.all([
+      includeHackathons ? fetchFromDevpost(user.field) : [],
+      includeJobs ? fetchFromJobicy(user.field) : [],
+      includeJobs ? fetchFromRemotive(user.field) : [],
+      includeJobs ? fetchFromArbeitnow(user.field) : [],
+    ]);
+
+  const jobResults = [...jobicyResults, ...remotiveResults, ...arbeitnowResults]
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 5);
+
+  let merged;
+  if (isHackathonOnly) {
+    merged = devpostResults;
+  } else if (isJobOnly) {
+    merged = jobResults;
+  } else {
+    merged = [...jobResults, ...devpostResults];
+  }
+
+  const seen = new Set();
+  const deduped = merged.filter((op) => {
+    const key = op.title?.toLowerCase().trim();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
+
+  return deduped.length > 0 ? deduped : null;
+}
+
+async function askGemini(userMessage, user) {
+  const currentDate = new Date().toISOString().split("T")[0];
+
+  const prompt = `You are Nexopra, a sharp AI assistant on WhatsApp helping ${user.name}, a ${user.field} professional/student. Today is ${currentDate}.
+
+User said: "${userMessage}"
+
+RULES:
+- Reply like a smart human, not an AI.
+- Never greet or use the user's name.
+- Start immediately with the answer.
+- Max 2-4 short sentences.
+- No markdown, no headers.
+- Use emojis sparingly.
+- If career/opportunity related, give the most relevant current info.`;
+
+  const reply = await callGroq(prompt);
+  return reply || "I couldn't find anything on that. Try rephrasing! 😅";
 }
 
 // ─────────────────────────────────────────
@@ -201,7 +423,7 @@ function formatOpportunities(name, opportunities, user) {
 
   opportunities.forEach((opp, i) => {
     msg += `${i + 1}. ${typeIcon(opp.type)} *${opp.title}*\n`;
-    msg += `   📍 ${opp.remote ? "Remote" : "On-site"} · ${opp.type}\n`;
+    msg += `   📍 ${opp.remote ? "Remote" : "On-site"} · ${opp.type}${opp.source ? ` · ${opp.source}` : ""}\n`;
     if (opp.summary) msg += `   ${opp.summary}\n`;
     if (opp.deadline) msg += `   ⏰ Deadline: ${opp.deadline}\n`;
     if (opp.prize) msg += `   💰 Prize: ${opp.prize}\n`;
@@ -225,12 +447,16 @@ function scheduleDelivery(sock) {
     const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(
       now.getMinutes(),
     ).padStart(2, "0")}`;
-
     for (const [jid, user] of Object.entries(users)) {
       if (user.active && user.deliveryTime === hhmm) {
-        // console.log(`📬 Delivering to ${user.name} (${jid})`);
         const opps = await fetchOpportunitiesForUser(user);
-        const message = formatOpportunities(user.name, opps, user);
+        const allOpps = opps || [];
+        const freshOpps = filterUnseen(jid, allOpps);
+        const message = formatOpportunities(
+          user.name,
+          freshOpps.length > 0 ? freshOpps : allOpps,
+          user,
+        );
         try {
           await sock.sendMessage(jid, { text: message });
         } catch (e) {
@@ -251,7 +477,7 @@ async function handleOnboarding(sock, sender, text, session) {
     session.tmpData.name = text.trim();
     session.step = "awaiting_field";
     await sock.sendMessage(sender, {
-      text: `Nice to meet you, *${session.tmpData.name}*! 🙌\n\nWhat's your field or skill? Reply with a *number*:\n\n1️⃣ Frontend Dev\n2️⃣ Backend Dev\n3️⃣ Full Stack Dev\n4️⃣ UI/UX Design\n5️⃣ Mobile Dev\n6️⃣ Data Science / AI\n7️⃣ Cybersecurity\n8️⃣ DevOps / Cloud\n9️⃣ Product Management\n🔟 Blockchain / Web3`,
+      text: `Nice to meet you, *${session.tmpData.name}*! 🙌\n\nWhat's your field or skill? Pick *one or more* by replying with numbers separated by commas:\n\n1️⃣ Frontend Dev\n2️⃣ Backend Dev\n3️⃣ Full Stack Dev\n4️⃣ UI/UX Design\n5️⃣ Mobile Dev\n6️⃣ Data Science / AI\n7️⃣ Cybersecurity\n8️⃣ DevOps / Cloud\n9️⃣ Product Management\n🔟 Blockchain / Web3\n\n_Example: *1,3* for Frontend + Full Stack_`,
     });
     return;
   }
@@ -270,10 +496,15 @@ async function handleOnboarding(sock, sender, text, session) {
       10: "Blockchain / Web3",
     };
 
-    const picked = fieldMap[text.trim()];
-    if (!picked) {
+    const inputs = text
+      .trim()
+      .split(",")
+      .map((s) => s.trim());
+    const picked = inputs.map((n) => fieldMap[parseInt(n)]).filter(Boolean); // remove invalid entries
+
+    if (picked.length === 0) {
       await sock.sendMessage(sender, {
-        text: `⚠️ Please reply with a number from *1 to 10* to pick your field.`,
+        text: `⚠️ Please reply with numbers from *1 to 10*, separated by commas.\n\nExample: *1,3* for Frontend Dev + Full Stack Dev`,
       });
       return;
     }
@@ -291,11 +522,11 @@ async function handleOnboarding(sock, sender, text, session) {
         "Product Manager 📋 The glue that holds it all together.",
       "Blockchain / Web3": "Web3 builder ⛓️ Decentralize everything!",
     };
-    session.tmpData.field = picked;
+    session.tmpData.field = picked.join(", ");
     session.step = "awaiting_time";
 
     await sock.sendMessage(sender, {
-      text: `${fieldResponses[picked]}\n\nAlmost done! ⏰ What time should I drop your daily opportunities?\n\nType in *HH:MM* (24hr), e.g.:\n• 07:00 → 7am\n• 18:00 → 6pm`,
+      text: `🔥 Nice combo! You picked:\n${picked.map((f) => `• ${f}`).join("\n")}\n\nAlmost done! ⏰ What time should I drop your daily opportunities?\n\nType in *HH:MM* (24hr), e.g.:\n• 07:00 → 7am\n• 18:00 → 6pm`,
     });
     return;
   }
@@ -323,7 +554,14 @@ async function handleOnboarding(sock, sender, text, session) {
     delete sessions[sender];
 
     await sock.sendMessage(sender, {
-      text: `✅ You're all set, *${users[sender].name}*!\n\n🤖 Nexopra will deliver *${users[sender].field}* opportunities to you daily at *${users[sender].deliveryTime}*.\n\nCommands you can use anytime:\n• *now* — get today's opportunities instantly\n• *pause* — pause daily updates\n• *resume* — resume updates\n• *update* — change your settings\n• *help* — show all commands\n\nHang tight — great opportunities are coming your way! 🚀`,
+      text: `✅ You're all set, *${users[sender].name}*!\n\n🤖 Nexopra will deliver opportunities for:\n${users[
+        sender
+      ].field
+        .split(", ")
+        .map((f) => `• ${f}`)
+        .join(
+          "\n",
+        )}\n\nDaily at *${users[sender].deliveryTime}*.\n\nCommands you can use anytime:\n• *now* — get today's opportunities instantly\n• *pause* — pause daily updates\n• *resume* — resume updates\n• *update* — change your settings\n• *help* — show all commands\n\nHang tight — great opportunities are coming your way! 🚀`,
     });
     return;
   }
@@ -682,19 +920,25 @@ async function handleMessage(sock, msg) {
   // ── COMMANDS ──
 
   // NOW — instant delivery
-  if (lower === "now") {
+  if (lower === "now" || lower === "more") {
     const loadingMessages = [
-      `👀 On it! Scanning for *${user.field}* opportunities...`,
-      `🔍 Digging through the internet for you, *${user.name}*...`,
-      `⚡ Give me a sec — finding the best ones for *${user.field}*...`,
-      `🤖 Searching... I got you *${user.name}* 🙌`,
+      `👀 On it! Scanning for *${user.field}* opportunities... might take a moment ⏳`,
+      `🔍 Digging through the internet for you, *${user.name}*... hang tight 🙏`,
+      `⚡ Finding the best ones for *${user.field}*... this may take a few secs ⏳`,
+      `🤖 On it *${user.name}* 🙌 — give me a moment, searching live...`,
     ];
     const randomLoad =
       loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
-
     await sock.sendMessage(sender, { text: randomLoad });
     const opps = await fetchOpportunitiesForUser(user);
-    const message = formatOpportunities(user.name, opps, user);
+    const allOpps = opps || [];
+    const freshOpps = filterUnseen(sender, allOpps);
+    const message = formatOpportunities(
+      user.name,
+      freshOpps.length > 0 ? freshOpps : allOpps,
+      user,
+    );
+
     await sock.sendMessage(sender, { text: message });
     return;
   }
@@ -703,6 +947,38 @@ async function handleMessage(sock, msg) {
     await sock.sendMessage(sender, {
       text: `👨‍💻 *About the Developer*\n\n🙋 *Modred*\n🌐 Website: modred.dev\n\nNexopra was designed and built by Modred — a developer passionate about building tools that help students and young professionals discover opportunities faster.\n\n_Got feedback or ideas? Reach out at modred.dev_ 💡`,
     });
+    return;
+  }
+  const filterMap = {
+    jobs: "Job",
+    job: "Job",
+    internships: "Internship",
+    internship: "Internship",
+    hackathons: "Hackathon",
+    hackathon: "Hackathon",
+    programs: "Program",
+    program: "Program",
+  };
+  if (filterMap[lower]) {
+    const filterType = filterMap[lower];
+    const loadingMessages = [
+      `🔍 Finding *${filterType}* opportunities for you...`,
+      `⚡ Scanning for *${filterType}s* right now...`,
+      `👀 On it! Looking for *${filterType}s* for *${user.name}*...`,
+    ];
+    await sock.sendMessage(sender, {
+      text: loadingMessages[Math.floor(Math.random() * loadingMessages.length)],
+    });
+    // FILTER command
+    const opps = await fetchOpportunitiesForUser(user, filterType);
+    const allOpps = opps || [];
+    const freshOpps = filterUnseen(sender, allOpps);
+    const message = formatOpportunities(
+      user.name,
+      freshOpps.length > 0 ? freshOpps : allOpps,
+      user,
+    );
+    await sock.sendMessage(sender, { text: message });
     return;
   }
 
@@ -746,7 +1022,7 @@ async function handleMessage(sock, msg) {
   // HELP
   if (lower === "help") {
     await sock.sendMessage(sender, {
-      text: `🤖 *Nexopra Commands*\n\n*now* — Get today's opportunities instantly\n*pause* — Pause daily updates\n*resume* — Resume daily updates\n*status* — View your profile\n*update* — Change your settings\n*dev* — About the developer\n*help* — Show this menu\n\nYou're subscribed as: *${user.name}* (${user.field})\nDaily delivery at: *${user.deliveryTime}*`,
+      text: `🤖 *Nexopra Commands*\n\n*now* — Get mixed opportunities\n*jobs* — Jobs only\n*internships* — Internships only\n*hackathons* — Hackathons only\n*programs* — Programs only\n*pause* — Pause daily updates\n*resume* — Resume daily updates\n*status* — View your profile\n*update* — Change your settings\n*dev* — About the developer\n*help* — Show this menu\n\nYou're subscribed as: *${user.name}* (${user.field})\nDaily delivery at: *${user.deliveryTime}*`,
     });
     return;
   }

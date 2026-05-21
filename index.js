@@ -138,6 +138,14 @@ const FIELD_MAP = {
 
 async function handleOnboarding(sock, sender, text, session) {
   const step = session.step;
+  const timeTo24hrs = (time) => {
+    let [hours, minutes] = time.split(":").map(Number);
+
+    const period = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12;
+
+    return `${hours}:${String(minutes).padStart(2, "0")} ${period}`;
+  };
 
   if (step === "awaiting_name") {
     session.tmpData.name = text.trim();
@@ -195,7 +203,7 @@ async function handleOnboarding(sock, sender, text, session) {
         .map((f) => `• ${f}`)
         .join(
           "\n",
-        )}\n\nDaily at *${user.deliveryTime}*.\n\nCommands:\n• *now* — get opportunities instantly\n• *jobs* / *hackathons* / *internships* — filter by type\n• *pause* / *resume* — toggle updates\n• *status* — your profile\n• *help* — all commands\n\n🚀 Great opportunities are coming your way!`,
+        )}\n\nDaily at *${timeTo24hrs(user.deliveryTime)}*.\n\nCommands:\n• *now* — get opportunities instantly\n• *jobs* / *hackathons* / *internships* — filter by type\n• *pause* / *resume* — toggle updates\n• *profile* — your profile\n• *menu* — all commands\n\n🚀 Great opportunities are coming your way!`,
     });
   }
 }
@@ -225,7 +233,6 @@ const GREETINGS = new Set([
   "heyy",
   "start",
   "begin",
-  "menu",
   "home",
   "yo",
   "sup",
@@ -301,14 +308,16 @@ async function handleMessage(sock, msg) {
         "Ready to find your next opportunity?",
       ];
       await sock.sendMessage(sender, {
-        text: `👋 Hey *${user.name}*! ${pepTalk[Math.floor(Math.random() * pepTalk.length)]}\n\n• *now* — get today's opportunities\n• *help* — see all commands`,
+        text: `👋 Hey *${user.name}*! ${pepTalk[Math.floor(Math.random() * pepTalk.length)]}\n\n• *now* — get today's opportunities\n• *menu* — see all commands`,
       });
     }
     return;
   }
 
   // ── NOW / MORE ──
-  const matchedPhrase = TRIGGER_PHRASES.some(phrase => lower.includes(phrase));
+  const matchedPhrase = TRIGGER_PHRASES.some((phrase) =>
+    lower.includes(phrase),
+  );
   if (lower === "now" || lower === "more" || matchedPhrase) {
     await sock.sendMessage(sender, {
       text: `⚡ Fetching the best opportunities for *${user.field}*... hang tight 🙏`,
@@ -337,16 +346,47 @@ async function handleMessage(sock, msg) {
   if (lower === "pause") {
     setUser(sender, { active: false });
     await sock.sendMessage(sender, {
-      text: `⏸️ Daily updates paused, ${user.name}.\nSend *resume* to continue.`,
+      text: `⏸️ Got it, ${user.name}. Daily updates are paused.\nSend *resume* whenever you're ready.`,
     });
     return;
   }
+  const timeTo24hrs = (time) => {
+    let [hours, minutes] = time.split(":").map(Number);
+
+    const period = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12;
+
+    return `${hours}:${String(minutes).padStart(2, "0")} ${period}`;
+  };
 
   // ── RESUME ──
   if (lower === "resume") {
     setUser(sender, { active: true });
+    const getNextRunDate = (deliveryTime, timeZone) => {
+      const now = new Date(new Date().toLocaleString("en-US", { timeZone }));
+
+      const [hours, minutes] = deliveryTime.split(":").map(Number);
+
+      const target = new Date(now);
+      target.setHours(hours, minutes, 0, 0);
+
+      const isPast = target <= now;
+
+      if (isPast) {
+        target.setDate(target.getDate() + 1);
+      }
+
+      const label = isPast ? "Tomorrow" : "Today";
+
+      return {
+        date: target,
+        label,
+      };
+    };
+    const { date, label } = getNextRunDate(user.deliveryTime, user.timezone);
     await sock.sendMessage(sender, {
-      text: `▶️ Updates resumed! Next batch at *${user.deliveryTime}* 🎯`,
+      text: `▶️ Updates resumed! Next opportunities drop *${label} at ${timeTo24hrs(user.deliveryTime)}* 🎯`,
+   
     });
     return;
   }
@@ -362,12 +402,71 @@ async function handleMessage(sock, msg) {
 
   // ── STATUS ──
   if (lower === "status" || lower === "profile") {
+    const fields = user.field.split(", ");
+    const fieldList = fields.map((f) => `   › ${f}`).join("\n");
+
     await sock.sendMessage(sender, {
-      text: `📊 *Your Nexopra Profile*\n\n👤 ${user.name}\n🛠 ${user.field}\n⏰ Daily: ${user.deliveryTime}\n📬 Updates: ${user.active ? "Active ✅" : "Paused ⏸️"}\n\nSend *now* for today's opportunities!`,
+      text: [
+        `┌──────────────`,
+        `  🤖 *NEXOPRA PROFILE*`,
+        `└──────────────`,
+
+        `👤 Username: *${user.name}*`,
+        `📅  Joined: ${new Date(user.joinedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`,
+
+        `━━━━━━━━━━━`,
+        `🛠  *TECH STACK*`,
+        fieldList,
+
+        `━━━━━━━━━━━`,
+        `⚙️  *PREFERENCES*`,
+        `   › Daily Delivery: *${timeTo24hrs(user.deliveryTime)}*`,
+        `   › Timezone: *${user.timezone || "Africa/Lagos"}*`,
+        `   › Show Remote: ${user.remote ? "*Yes*" : "*No*"}`,
+
+        `━━━━━━━━━━━`,
+        `📬  *STATUS*`,
+        `   › Updates: ${user.active ? "*Active*" : "*Paused*"}`,
+
+        `━━━━━━━━━━━`,
+        ``,
+        `_Type *now* to get today's opportunities_`,
+        `_Type *update* to edit your profile_`,
+      ].join("\n"),
     });
     return;
   }
+  if (lower === "about") {
+    await sock.sendMessage(sender, {
+      text: [
+        `┌──────────────`,
+        `  ✨ *ABOUT NEXOPRA*`,
+        `└──────────────`,
+        ``,
+        `*Nexopra* is your AI-powered opportunity scout — delivering the best tech jobs, hackathons, fellowships & grants directly to your WhatsApp, every single day.`,
+        ``,
+        `━━━━━━━━━━━`,
+        `👨‍💻  *THE DEVELOPER*`,
+        ``,
+        `   *Modred*`,
+        `   Full Stack Web Developer`,
+        ``,
+        `   🌐  https://modred.dev`,
+        `   📧  favourdomirin@gmail.com`,
+        `   📱  +23279566275`,
 
+        `━━━━━━━━━━━`,
+        `🚀  *NEXOPRA*`,
+        `   › Version: *1.0.1*`,
+        `   › Built with: Node.js · Baileys · Groq`,
+        `   › Serving developers across Africa`,
+
+        `━━━━━━━━━━━`,
+        `_Built for developers_ 🌍`,
+      ].join("\n"),
+    });
+    return;
+  }
   const developerTriggers = [
     "developer",
     "dev",
@@ -391,7 +490,19 @@ async function handleMessage(sock, msg) {
   );
   if (isDeveloperQuery) {
     await sock.sendMessage(sender, {
-      text: `✨ *About Nexopra*\n\nNexopra was built by *Modred* — a full stack web developer.\n\n👨‍💻 *Developer:* Modred\n🌐 https://modred.dev\n📧 favourdomirin@gmail.com\n📱 +23279566275`,
+      text: [
+        `━━━━━━━━━━━`,
+        `👨‍💻  *THE DEVELOPER*`,
+        ``,
+        `   *Modred*`,
+        `   Full Stack Web Developer`,
+        ``,
+        `   🌐  https://modred.dev`,
+        `   📧  favourdomirin@gmail.com`,
+        `   📱  +23279566275`,
+        ``,
+        `━━━━━━━━━━━`,
+      ].join("\n"),
     });
 
     // Send WhatsApp contact card
@@ -417,9 +528,41 @@ END:VCARD`,
   }
 
   // ── HELP ──
-  if (lower === "help") {
+  if (lower === "help" || lower === "menu") {
     await sock.sendMessage(sender, {
-      text: `🤖 *Nexopra Commands*\n\n*now* — Get mixed opportunities\n*jobs* — Jobs only\n*internships* — Internships only\n*hackathons* — Hackathons only\n*fellowships* — Fellowships only\n*pause* — Pause daily updates\n*resume* — Resume updates\n*status* — Your profile\n*update* — Change settings\n*dev* — About the developer\n*help* — This menu\n\nSubscribed as: *${user.name}* (${user.field})\nDaily at: *${user.deliveryTime}*`,
+      text: [
+        `┌──────────────`,
+        `  🤖 *NEXOPRA* 🤖`,
+        `└──────────────`,
+        ``,
+        `📡 *OPPORTUNITIES*`,
+        `   › *now* — Get fresh opportunities`,
+        `   › *jobs* — Jobs only`,
+        `   › *internships* — Internships only`,
+        `   › *hackathons* — Hackathons only`,
+        `   › *fellowships* — Fellowships only`,
+        `   › *grants* — Grants only`,
+        `   › *programs* — Programs only`,
+
+        `━━━━━━━━━━━`,
+        `⚙️  *ACCOUNT*`,
+        `   › *profile* — View your profile`,
+        `   › *update* — Edit your settings`,
+        `   › *pause* — Pause daily updates`,
+        `   › *resume* — Resume updates`,
+
+        `━━━━━━━━━━━`,
+
+        `ℹ️  *INFO*`,
+        `   › *dev* — About the developer`,
+        `   › *about* — About this bot`,
+        `   › *menu* — This menu`,
+
+        `━━━━━━━━━━━`,
+        `👤  *${user.name}*  ·  \`${user.field}\``,
+        `⏰  Daily at *${timeTo24hrs(user.deliveryTime)}*`,
+        `━━━━━━━━━━━`,
+      ].join("\n"),
     });
     return;
   }

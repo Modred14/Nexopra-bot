@@ -1,7 +1,7 @@
 {
-  "totalFound": 654,
-  "duplicatesRemoved": 398,
-  "aiAccepted": 81,
+  "totalFound": 1081,
+  "duplicatesRemoved": 766,
+  "aiAccepted": 83,
   "aiRejected": 0,
   "failedScrapes": 1,
   "bySource": {
@@ -10,11 +10,11 @@
       "failed": 1
     },
     "Greenhouse": {
-      "found": 346,
+      "found": 596,
       "failed": 0
     },
     "Lever": {
-      "found": 36,
+      "found": 45,
       "failed": 0
     },
     "Wellfound": {
@@ -22,7 +22,7 @@
       "failed": 0
     },
     "YC Jobs": {
-      "found": 264,
+      "found": 432,
       "failed": 0
     },
     "LinkedIn (Google)": {
@@ -35,118 +35,6 @@
     }
   },
   "runs": [
-    {
-      "type": "hackathons",
-      "raw": 0,
-      "deduped": 0,
-      "filtered": 0,
-      "duration": 23839,
-      "ts": "2026-05-20T23:48:52.731Z"
-    },
-    {
-      "type": "jobs",
-      "raw": 18,
-      "deduped": 18,
-      "filtered": 18,
-      "duration": 67512,
-      "ts": "2026-05-20T23:49:36.323Z"
-    },
-    {
-      "type": "hackathons",
-      "raw": 8,
-      "deduped": 8,
-      "filtered": 8,
-      "duration": 3931,
-      "ts": "2026-05-20T23:52:48.027Z"
-    },
-    {
-      "type": "jobs",
-      "raw": 18,
-      "deduped": 6,
-      "filtered": 6,
-      "duration": 41849,
-      "ts": "2026-05-20T23:53:25.896Z"
-    },
-    {
-      "type": "x_monitoring",
-      "raw": 0,
-      "deduped": 0,
-      "filtered": 0,
-      "duration": 396857,
-      "ts": "2026-05-20T23:59:20.959Z"
-    },
-    {
-      "type": "hackathons",
-      "raw": 0,
-      "deduped": 0,
-      "filtered": 0,
-      "duration": 1275,
-      "ts": "2026-05-21T00:02:14.611Z"
-    },
-    {
-      "type": "jobs",
-      "raw": 21,
-      "deduped": 13,
-      "filtered": 13,
-      "duration": 39167,
-      "ts": "2026-05-21T00:02:52.441Z"
-    },
-    {
-      "type": "hackathons",
-      "raw": 0,
-      "deduped": 0,
-      "filtered": 0,
-      "duration": 1158,
-      "ts": "2026-05-21T00:04:03.027Z"
-    },
-    {
-      "type": "jobs",
-      "raw": 17,
-      "deduped": 5,
-      "filtered": 5,
-      "duration": 39019,
-      "ts": "2026-05-21T00:04:40.844Z"
-    },
-    {
-      "type": "x_monitoring",
-      "raw": 0,
-      "deduped": 0,
-      "filtered": 0,
-      "duration": 375597,
-      "ts": "2026-05-21T00:10:17.471Z"
-    },
-    {
-      "type": "hackathons",
-      "raw": 0,
-      "deduped": 0,
-      "filtered": 0,
-      "duration": 1401,
-      "ts": "2026-05-21T00:12:18.123Z"
-    },
-    {
-      "type": "jobs",
-      "raw": 17,
-      "deduped": 15,
-      "filtered": 15,
-      "duration": 42799,
-      "ts": "2026-05-21T00:12:59.491Z"
-    },
-    {
-      "type": "hackathons",
-      "raw": 0,
-      "deduped": 0,
-      "filtered": 0,
-      "duration": 1413,
-      "ts": "2026-05-21T00:13:39.942Z"
-    },
-    {
-      "type": "jobs",
-      "raw": 20,
-      "deduped": 5,
-      "filtered": 5,
-      "duration": 34812,
-      "ts": "2026-05-21T00:14:13.324Z"
-    },
     {
       "type": "hackathons",
       "raw": 0,
@@ -538,6 +426,414 @@
       "filtered": 0,
       "duration": 33306,
       "ts": "2026-05-21T01:59:45.058Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1118,
+      "ts": "2026-05-21T02:04:33.239Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 15,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 33826,
+      "ts": "2026-05-21T02:05:05.903Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1171,
+      "ts": "2026-05-21T02:10:48.690Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 18,
+      "deduped": 1,
+      "filtered": 1,
+      "duration": 46594,
+      "ts": "2026-05-21T02:11:34.090Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 945,
+      "ts": "2026-05-21T02:11:40.503Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 15,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 30863,
+      "ts": "2026-05-21T02:12:10.406Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1298,
+      "ts": "2026-05-21T02:14:04.709Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 18,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 37284,
+      "ts": "2026-05-21T02:14:40.680Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1032,
+      "ts": "2026-05-21T02:14:54.130Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 18,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 35989,
+      "ts": "2026-05-21T02:15:29.043Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1119,
+      "ts": "2026-05-21T02:15:38.429Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 12,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 32921,
+      "ts": "2026-05-21T02:16:10.215Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1982,
+      "ts": "2026-05-21T02:16:46.859Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 15,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 34480,
+      "ts": "2026-05-21T02:17:19.339Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1402,
+      "ts": "2026-05-21T02:20:43.767Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 18,
+      "deduped": 1,
+      "filtered": 1,
+      "duration": 38595,
+      "ts": "2026-05-21T02:21:20.937Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 996,
+      "ts": "2026-05-21T02:21:48.992Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 11,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 37426,
+      "ts": "2026-05-21T02:22:25.405Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1206,
+      "ts": "2026-05-21T02:23:50.750Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 12,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 33598,
+      "ts": "2026-05-21T02:24:23.125Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1176,
+      "ts": "2026-05-21T02:27:43.921Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 18,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 34852,
+      "ts": "2026-05-21T02:28:17.562Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1271,
+      "ts": "2026-05-21T02:33:05.445Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 14,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 36640,
+      "ts": "2026-05-21T02:33:40.751Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1093,
+      "ts": "2026-05-21T02:35:04.276Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 14,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 38556,
+      "ts": "2026-05-21T02:35:41.712Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1163,
+      "ts": "2026-05-21T02:42:11.461Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1016,
+      "ts": "2026-05-21T02:42:53.528Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 14,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 36846,
+      "ts": "2026-05-21T02:43:29.305Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1044,
+      "ts": "2026-05-21T02:43:47.039Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 17,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 34608,
+      "ts": "2026-05-21T02:44:20.571Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1181,
+      "ts": "2026-05-21T02:45:20.689Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 14,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 37779,
+      "ts": "2026-05-21T02:45:57.268Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1119,
+      "ts": "2026-05-21T02:46:36.869Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 985,
+      "ts": "2026-05-21T02:47:10.552Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1031,
+      "ts": "2026-05-21T02:47:28.112Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 15,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 37018,
+      "ts": "2026-05-21T02:48:04.065Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1493,
+      "ts": "2026-05-21T03:01:14.329Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 14,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 39582,
+      "ts": "2026-05-21T03:01:52.338Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 978,
+      "ts": "2026-05-21T03:02:18.833Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 14,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 38416,
+      "ts": "2026-05-21T03:02:56.236Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1434,
+      "ts": "2026-05-21T03:04:17.621Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 16,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 37087,
+      "ts": "2026-05-21T03:04:53.174Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1159,
+      "ts": "2026-05-21T03:07:38.330Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 17,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 35798,
+      "ts": "2026-05-21T03:08:12.900Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1289,
+      "ts": "2026-05-21T03:09:51.541Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 17,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 35288,
+      "ts": "2026-05-21T03:10:25.505Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1291,
+      "ts": "2026-05-21T03:17:29.976Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 17,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 38025,
+      "ts": "2026-05-21T03:18:06.683Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 1077,
+      "ts": "2026-05-21T03:18:48.627Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 17,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 37581,
+      "ts": "2026-05-21T03:19:25.030Z"
     }
   ]
 }

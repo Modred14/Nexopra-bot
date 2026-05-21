@@ -1,12 +1,4 @@
 {
-  "66271613866160@lid": {
-    "name": "Modred",
-    "field": "Full Stack Dev",
-    "deliveryTime": "13:00",
-    "timezone": "Africa/Lagos",
-    "active": true,
-    "joinedAt": "2026-05-19T17:14:07.042Z"
-  },
   "145076009345267@lid": {
     "name": "Erioluwa",
     "field": "Frontend Dev",
@@ -22,5 +14,14 @@
     "timezone": "Africa/Lagos",
     "active": true,
     "joinedAt": "2026-05-19T16:23:40.835Z"
+  },
+  "66271613866160@lid": {
+    "name": "Modred",
+    "field": "Frontend Dev, Cybersecurity",
+    "deliveryTime": "05:00",
+    "timezone": "Africa/Lagos",
+    "active": true,
+    "remote": true,
+    "joinedAt": "2026-05-20T23:53:53.618Z"
   }
 }

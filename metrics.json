@@ -1,0 +1,115 @@
+{
+  "totalFound": 65,
+  "duplicatesRemoved": 29,
+  "aiAccepted": 36,
+  "aiRejected": 0,
+  "failedScrapes": 0,
+  "bySource": {
+    "Devpost": {
+      "found": 3,
+      "failed": 0
+    },
+    "Greenhouse": {
+      "found": 29,
+      "failed": 0
+    },
+    "Lever": {
+      "found": 3,
+      "failed": 0
+    },
+    "Wellfound": {
+      "found": 0,
+      "failed": 0
+    },
+    "YC Jobs": {
+      "found": 30,
+      "failed": 0
+    },
+    "LinkedIn (Google)": {
+      "found": 0,
+      "failed": 0
+    }
+  },
+  "runs": [
+    {
+      "type": "hackathons",
+      "raw": 1,
+      "deduped": 1,
+      "filtered": 1,
+      "duration": 2902,
+      "ts": "2026-05-22T22:22:57.909Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 15,
+      "deduped": 14,
+      "filtered": 14,
+      "duration": 43934,
+      "ts": "2026-05-22T22:23:38.860Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 3488,
+      "ts": "2026-05-22T22:34:32.337Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 13,
+      "deduped": 5,
+      "filtered": 5,
+      "duration": 44549,
+      "ts": "2026-05-22T22:35:13.308Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 2409,
+      "ts": "2026-05-22T22:36:22.432Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 14,
+      "deduped": 8,
+      "filtered": 8,
+      "duration": 60861,
+      "ts": "2026-05-22T22:37:20.861Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 0,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 2925,
+      "ts": "2026-05-22T22:41:11.482Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 14,
+      "deduped": 6,
+      "filtered": 6,
+      "duration": 65647,
+      "ts": "2026-05-22T22:42:14.173Z"
+    },
+    {
+      "type": "hackathons",
+      "raw": 2,
+      "deduped": 2,
+      "filtered": 2,
+      "duration": 2548,
+      "ts": "2026-05-22T22:42:32.171Z"
+    },
+    {
+      "type": "jobs",
+      "raw": 6,
+      "deduped": 0,
+      "filtered": 0,
+      "duration": 35995,
+      "ts": "2026-05-22T22:43:05.613Z"
+    }
+  ]
+}

@@ -238,7 +238,134 @@ async function handleOnboarding(sock, sender, text, session) {
     });
   }
 }
+const UPDATE_MAP = {
+  1: "name",
+  2: "field",
+  3: "region",
+  4: "time",
+};
 
+async function handleUpdate(sock, sender, text, session) {
+  const step = session.step;
+
+  // STEP 1 — Ask what to update
+  if (step === "awaiting_update_choice") {
+    const choice = UPDATE_MAP[parseInt(text.trim())];
+    if (!choice) {
+      await sock.sendMessage(sender, {
+        text: "⚠️ Reply with a number from 1–4.",
+      });
+      return;
+    }
+    session.updateField = choice;
+
+    if (choice === "name") {
+      session.step = "awaiting_update_name";
+      await sock.sendMessage(sender, {
+        text: "✏️ What should I call you now?",
+      });
+    } else if (choice === "field") {
+      session.step = "awaiting_update_field";
+      await sock.sendMessage(sender, {
+        text: `✏️ Pick your new field(s):\n\n1️⃣ Frontend Dev\n2️⃣ Backend Dev\n3️⃣ Full Stack Dev\n4️⃣ UI/UX Design\n5️⃣ Mobile Dev\n6️⃣ Data Science / AI\n7️⃣ Cybersecurity\n8️⃣ DevOps / Cloud\n9️⃣ Product Management\n🔟 Blockchain / Web3\n\n_E.g. *1,3*_`,
+      });
+    } else if (choice === "region") {
+      session.step = "awaiting_update_region";
+      await sock.sendMessage(sender, {
+        text: `✏️ Where are you based?\n\n1️⃣ Nigeria\n2️⃣ Ghana\n3️⃣ Kenya\n4️⃣ South Africa\n5️⃣ United States\n6️⃣ United Kingdom\n7️⃣ Canada\n8️⃣ India\n9️⃣ Remote only`,
+      });
+    } else if (choice === "time") {
+      session.step = "awaiting_update_time";
+      await sock.sendMessage(sender, {
+        text: `✏️ What time for daily delivery? (24hr HH:MM)\nE.g. *08:00* or *18:30*`,
+      });
+    }
+    return;
+  }
+
+  const user = getUser(sender);
+
+  if (step === "awaiting_update_name") {
+    const name = text.trim();
+    if (!name) {
+      await sock.sendMessage(sender, { text: "⚠️ Name can't be empty." });
+      return;
+    }
+    setUser(sender, { name });
+    delete sessions[sender];
+    await sock.sendMessage(sender, {
+      text: `✅ Your name has been updated to *${name}*.`,
+    });
+    return;
+  }
+
+  if (step === "awaiting_update_field") {
+    const picked = text
+      .trim()
+      .split(",")
+      .map((n) => FIELD_MAP[parseInt(n.trim())])
+      .filter(Boolean);
+    if (!picked.length) {
+      await sock.sendMessage(sender, {
+        text: "⚠️ Reply with numbers 1–10, comma-separated. E.g. *1,3*",
+      });
+      return;
+    }
+    const field = picked.join(", ");
+    setUser(sender, { field });
+    delete sessions[sender];
+    await sock.sendMessage(sender, {
+      text: `✅ Your field has been updated to:\n${picked.map((f) => `• ${f}`).join("\n")}`,
+    });
+    return;
+  }
+
+  if (step === "awaiting_update_region") {
+    const REGION_MAP = {
+      1: "Nigeria",
+      2: "Ghana",
+      3: "Kenya",
+      4: "South Africa",
+      5: "United States",
+      6: "United Kingdom",
+      7: "Canada",
+      8: "India",
+      9: "Remote only",
+    };
+    const region = REGION_MAP[parseInt(text.trim())];
+    if (!region) {
+      await sock.sendMessage(sender, {
+        text: "⚠️ Reply with a number from 1–9.",
+      });
+      return;
+    }
+    setUser(sender, {
+      region: region === "Remote only" ? "" : region,
+      remote: region === "Remote only" ? true : false,
+    });
+    delete sessions[sender];
+    await sock.sendMessage(sender, {
+      text: `✅ Your region has been updated to *${region}*.`,
+    });
+    return;
+  }
+
+  if (step === "awaiting_update_time") {
+    const normalized = text.trim().replace(/^(\d):/, "0$1:");
+    if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(normalized)) {
+      await sock.sendMessage(sender, {
+        text: "⚠️ Invalid time format. Kindly use HH:MM format, e.g. *08:00* or *18:30*",
+      });
+      return;
+    }
+    setUser(sender, { deliveryTime: normalized });
+    delete sessions[sender];
+    await sock.sendMessage(sender, {
+      text: `✅ Your daily delivery time has been updated to *${timeTo24hrs(normalized)}*.`,
+    });
+    return;
+  }
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN MESSAGE HANDLER
 // ─────────────────────────────────────────────────────────────────────────────
@@ -319,8 +446,14 @@ async function handleMessage(sock, msg) {
   }
 
   // ── Onboarding in progress ──
+  // ── Onboarding in progress ──
   if (sessions[sender]) {
-    await handleOnboarding(sock, sender, text, sessions[sender]);
+    // Route update sessions separately
+    if (sessions[sender].step?.startsWith("awaiting_update")) {
+      await handleUpdate(sock, sender, text, sessions[sender]);
+    } else {
+      await handleOnboarding(sock, sender, text, sessions[sender]);
+    }
     return;
   }
 
@@ -381,7 +514,6 @@ async function handleMessage(sock, msg) {
     });
     return;
   }
-  
 
   // ── RESUME ──
   if (lower === "resume") {
@@ -415,10 +547,10 @@ async function handleMessage(sock, msg) {
   }
 
   // ── UPDATE ──
-  if (lower === "update") {
-    sessions[sender] = { step: "awaiting_name", tmpData: {} };
+  if (lower === "update" || lower === "settings" || lower === "setting") {
+    sessions[sender] = { step: "awaiting_update_choice", tmpData: {} };
     await sock.sendMessage(sender, {
-      text: `🔄 Let's update your profile!\n\nWhat's your *name*?`,
+      text: `✏️ What would you like to update?\n\n1️⃣ Name\n2️⃣ Field / Tech stack\n3️⃣ Region\n4️⃣ Delivery time\n\nReply with a number.`,
     });
     return;
   }
@@ -445,7 +577,7 @@ async function handleMessage(sock, msg) {
         `⚙️  *PREFERENCES*`,
         `   › Daily Delivery: *${timeTo24hrs(user.deliveryTime)}*`,
         `   › Timezone: *${user.timezone || "Africa/Lagos"}*`,
-        `   › Show Remote: ${user.remote ? "*Yes*" : "*No*"}`,
+        `   › Remote Only: ${user.remote ? "*Yes*" : "*No*"}`,
 
         `━━━━━━━━━━━`,
         `📬  *STATUS*`,

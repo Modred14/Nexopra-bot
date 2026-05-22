@@ -55,20 +55,12 @@ export function filterUnseenForUser(jid, opportunities) {
   const seen = new Set(userSeen[jid]);
 
   const fresh = opportunities.filter((opp) => {
-    // Use ONLY normalized title as the stable key
-    // URLs change between fetches, titles don't
-    const key = (opp.title || "")
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, " ");
+    const key = (opp.sourceUrl || opp.title || "").toLowerCase().trim();
     return !seen.has(key);
   });
 
   fresh.forEach((opp) => {
-    const key = (opp.title || "")
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, " ");
+    const key = (opp.sourceUrl || opp.title || "").toLowerCase().trim();
     userSeen[jid].push(key);
   });
 

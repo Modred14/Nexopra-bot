@@ -135,17 +135,16 @@ const FIELD_MAP = {
   9: "Product Management",
   10: "Blockchain / Web3",
 };
+const timeTo24hrs = (time) => {
+  let [hours, minutes] = time.split(":").map(Number);
 
+  const period = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12 || 12;
+
+  return `${hours}:${String(minutes).padStart(2, "0")} ${period}`;
+};
 async function handleOnboarding(sock, sender, text, session) {
   const step = session.step;
-  const timeTo24hrs = (time) => {
-    let [hours, minutes] = time.split(":").map(Number);
-
-    const period = hours >= 12 ? "PM" : "AM";
-    hours = hours % 12 || 12;
-
-    return `${hours}:${String(minutes).padStart(2, "0")} ${period}`;
-  };
 
   if (step === "awaiting_name") {
     session.tmpData.name = text.trim();
@@ -169,9 +168,40 @@ async function handleOnboarding(sock, sender, text, session) {
       return;
     }
     session.tmpData.field = picked.join(", ");
+    session.step = "awaiting_region";
+
+    await sock.sendMessage(sender, {
+      text: `🔥 Got it:\n${picked.map((f) => `• ${f}`).join("\n")}\n\n📍 Where are you based?\n\n1️⃣ Nigeria\n2️⃣ Ghana\n3️⃣ Kenya\n4️⃣ South Africa\n5️⃣ United States\n6️⃣ United Kingdom\n7️⃣ Canada\n8️⃣ India\n9️⃣ Remote only\n\nReply with a number.`,
+    });
+
+    return;
+  }
+
+  const REGION_MAP = {
+    1: "Nigeria",
+    2: "Ghana",
+    3: "Kenya",
+    4: "South Africa",
+    5: "United States",
+    6: "United Kingdom",
+    7: "Canada",
+    8: "India",
+    9: "Remote only",
+  };
+
+  if (step === "awaiting_region") {
+    const region = REGION_MAP[parseInt(text.trim())];
+    if (!region) {
+      await sock.sendMessage(sender, {
+        text: "⚠️ Reply with a number from 1–9.",
+      });
+      return;
+    }
+
+    session.tmpData.region = region;
     session.step = "awaiting_time";
     await sock.sendMessage(sender, {
-      text: `🔥 Got it:\n${picked.map((f) => `• ${f}`).join("\n")}\n\n⏰ What time for daily delivery? (24hr HH:MM)\nE.g. *08:00* or *18:30*`,
+      text: `📍 Got it — *${region}*!\n\n⏰ Last step! What time should I drop your daily opportunities?\n\nUse 24hr format (HH:MM):\n• *07:00* → 7am\n• *18:00* → 6pm`,
     });
     return;
   }
@@ -184,14 +214,15 @@ async function handleOnboarding(sock, sender, text, session) {
       });
       return;
     }
-
+    const region = session.tmpData.region;
     setUser(sender, {
       name: session.tmpData.name,
       field: session.tmpData.field,
       deliveryTime: normalized,
       timezone: "Africa/Lagos",
+      region: region === "Remote only" ? "" : region,
+      remote: region === "Remote only" ? true : false,
       active: true,
-      remote: true,
       joinedAt: new Date().toISOString(),
     });
     delete sessions[sender];
@@ -203,7 +234,7 @@ async function handleOnboarding(sock, sender, text, session) {
         .map((f) => `• ${f}`)
         .join(
           "\n",
-        )}\n\nDaily at *${timeTo24hrs(user.deliveryTime)}*.\n\nCommands:\n• *now* — get opportunities instantly\n• *jobs* / *hackathons* / *internships* — filter by type\n• *pause* / *resume* — toggle updates\n• *profile* — your profile\n• *menu* — all commands\n\n🚀 Great opportunities are coming your way!`,
+        )}\n\n📍 Region: *${region}*\n⏰Daily at *${timeTo24hrs(user.deliveryTime)}*.\n\nCommands:\n• *now* — get opportunities instantly\n• *jobs* / *hackathons* / *internships* — filter by type\n• *pause* / *resume* — toggle updates\n• *profile* — your profile\n• *menu* — all commands\n\n🚀 Great opportunities are coming your way!`,
     });
   }
 }
@@ -350,14 +381,7 @@ async function handleMessage(sock, msg) {
     });
     return;
   }
-  const timeTo24hrs = (time) => {
-    let [hours, minutes] = time.split(":").map(Number);
-
-    const period = hours >= 12 ? "PM" : "AM";
-    hours = hours % 12 || 12;
-
-    return `${hours}:${String(minutes).padStart(2, "0")} ${period}`;
-  };
+  
 
   // ── RESUME ──
   if (lower === "resume") {
@@ -386,7 +410,6 @@ async function handleMessage(sock, msg) {
     const { date, label } = getNextRunDate(user.deliveryTime, user.timezone);
     await sock.sendMessage(sender, {
       text: `▶️ Updates resumed! Next opportunities drop *${label} at ${timeTo24hrs(user.deliveryTime)}* 🎯`,
-   
     });
     return;
   }
@@ -577,7 +600,7 @@ END:VCARD`,
   // await sock.sendMessage(sender, {
   //   text: `${confused[Math.floor(Math.random() * confused.length)]}\n\nShould I search the web for *"${text}"*? Reply *yes* or *no*`,
   // });
-  const reply = await quickAnswer(lower, user);
+  const reply = await quickAnswer(lower, user, sender);
   await sock.sendMessage(sender, { text: reply });
 }
 
